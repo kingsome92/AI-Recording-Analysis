@@ -796,29 +796,14 @@
                 padding: 10px 6px;
             }
             
-            .knowledge-stat-item {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 8px;
+            /* 手机端隐藏知识点讲解热度的百分比柱状条，仅保留核心知识节点 */
+            .knowledge-statistics {
+                display: none;
             }
             
-            .knowledge-stat-item .knowledge-node {
-                min-width: auto;
-                width: auto;
-            }
-            
-            .knowledge-stat-item .stat-bar-container {
-                width: 100%;
-                margin: 0;
-            }
-            
-            .knowledge-stat-item .stat-bar {
-                /* 保持原有的百分比宽度，不要强制100% */
-            }
-            
-            .knowledge-stat-item .stat-value {
-                align-self: flex-end;
-                min-width: auto;
+            /* 同时隐藏“知识点讲解热度分析”小标题，避免出现空白块 */
+            .knowledge-graph .subtitle:nth-of-type(2) {
+                display: none;
             }
             
             .back-to-top {
