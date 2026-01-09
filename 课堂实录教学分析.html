@@ -1,0 +1,1772 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>AI课堂教学录音分析报告 - 商鞅变法</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Noto Sans SC', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+            color: #333;
+            line-height: 1.6;
+            padding: 8px;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1a6dcc 0%, #0d4d9c 100%);
+            color: white;
+            padding: 20px 15px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+        
+        .header p {
+            font-size: 0.85rem;
+            opacity: 0.95;
+            margin-bottom: 8px;
+        }
+        
+        .ai-badge {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 6px 14px;
+            font-size: 0.7rem;
+            display: flex;
+            align-items: center;
+            font-weight: 500;
+        }
+        
+        .ai-badge i {
+            margin-right: 5px;
+        }
+        
+        .recording-status {
+            display: inline-flex;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            margin-top: 5px;
+        }
+        
+        .recording-status.active {
+            animation: pulse 2s infinite;
+        }
+        
+        .recording-status i {
+            margin-right: 5px;
+            font-size: 0.6rem;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        
+        .report-info {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            background: linear-gradient(135deg, #f0f6ff 0%, #e8f1ff 100%);
+            padding: 15px 10px;
+            border-bottom: 1px solid #e0e6f0;
+            gap: 12px;
+        }
+        
+        .info-item {
+            text-align: center;
+            padding: 8px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+        
+        .info-label {
+            font-size: 0.7rem;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .info-value {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #1a6dcc;
+        }
+        
+        .section {
+            padding: 18px 15px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .section:last-child {
+            border-bottom: none;
+        }
+        
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #1a6dcc;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .section-title-left {
+            display: flex;
+            align-items: center;
+        }
+        
+        .section-title i {
+            margin-right: 10px;
+            background: #e8f1ff;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #1a6dcc;
+            font-size: 0.9rem;
+        }
+        
+        .section-toggle {
+            background: none;
+            border: none;
+            color: #1a6dcc;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 5px;
+            transition: transform 0.3s;
+        }
+        
+        .section-toggle.collapsed {
+            transform: rotate(-90deg);
+        }
+        
+        .section-content {
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+        
+        .section-content.collapsed {
+            max-height: 0;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-top: 10px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #f8faff 0%, #f0f6ff 100%);
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+            border-left: 4px solid #1a6dcc;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .stat-card:active {
+            transform: scale(0.98);
+        }
+        
+        .stat-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #1a6dcc;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 0.8rem;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .stat-rating {
+            margin-top: 8px;
+            font-size: 0.75rem;
+            color: #4CAF50;
+            font-weight: 500;
+        }
+        
+        .stat-progress {
+            width: 100%;
+            height: 4px;
+            background: #e0e6f0;
+            border-radius: 2px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+        
+        .stat-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #1a6dcc, #4CAF50);
+            border-radius: 2px;
+            transition: width 0.5s ease;
+        }
+        
+        .chart-container {
+            height: 280px;
+            margin: 15px 0;
+            position: relative;
+        }
+        
+        .legend {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 15px;
+            font-size: 0.75rem;
+            gap: 10px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            padding: 5px 10px;
+            background: #f8faff;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .legend-item:active {
+            transform: scale(0.95);
+        }
+        
+        .legend-color {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            margin-right: 6px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .knowledge-graph {
+            margin-top: 15px;
+            padding: 15px;
+            background: #fafcff;
+            border-radius: 12px;
+            border: 1px solid #e0e6f0;
+        }
+        
+        .knowledge-node {
+            display: inline-block;
+            background: linear-gradient(135deg, #f0f6ff 0%, #e8f1ff 100%);
+            padding: 10px 16px;
+            margin: 6px 4px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            border: 2px solid #d1e3ff;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+        
+        .knowledge-node:active {
+            transform: scale(0.95);
+        }
+        
+        .knowledge-node.highlight {
+            background: linear-gradient(135deg, #1a6dcc 0%, #0d4d9c 100%);
+            color: white;
+            font-weight: 600;
+            border-color: #1a6dcc;
+            box-shadow: 0 4px 12px rgba(26, 109, 204, 0.3);
+        }
+        
+        .knowledge-node::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            right: -8px;
+            width: 0;
+            height: 0;
+            border-left: 6px solid #1a6dcc;
+            border-top: 4px solid transparent;
+            border-bottom: 4px solid transparent;
+            transform: translateY(-50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .knowledge-node.highlight::after {
+            opacity: 1;
+        }
+        
+        .interaction-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 0.8rem;
+            display: block;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .interaction-table thead,
+        .interaction-table tbody {
+            display: table;
+            width: 100%;
+        }
+        
+        .interaction-table th {
+            background: linear-gradient(135deg, #f0f6ff 0%, #e8f1ff 100%);
+            padding: 12px 8px;
+            text-align: left;
+            font-weight: 600;
+            color: #1a6dcc;
+            border-bottom: 2px solid #d1e3ff;
+            white-space: nowrap;
+        }
+        
+        .interaction-table td {
+            padding: 12px 8px;
+            border-bottom: 1px solid #f0f0f0;
+            word-break: break-word;
+        }
+        
+        .interaction-type {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 15px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        
+        .type-question {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+        
+        .type-metaphor {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        
+        .type-scenario {
+            background: #fff3e0;
+            color: #ef6c00;
+        }
+        
+        .type-discussion {
+            background: #f3e5f5;
+            color: #7b1fa2;
+        }
+        
+        .type-vote {
+            background: #e0f2f1;
+            color: #00695c;
+        }
+        
+        .suggestion-list {
+            list-style-type: none;
+        }
+        
+        .suggestion-list li {
+            padding: 12px 0;
+            border-bottom: 1px dashed #e0e0e0;
+            display: flex;
+            align-items: flex-start;
+        }
+        
+        .suggestion-list li:last-child {
+            border-bottom: none;
+        }
+        
+        .suggestion-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            flex-shrink: 0;
+            font-size: 0.8rem;
+        }
+        
+        .good-icon {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            color: #4CAF50;
+        }
+        
+        .suggestion-icon:not(.good-icon) {
+            background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+            color: #FF9800;
+        }
+        
+        .transcript-container {
+            max-height: 500px;
+            overflow-y: auto;
+            border: 1px solid #e0e6f0;
+            border-radius: 12px;
+            padding: 0;
+            margin-top: 15px;
+            background: #fafcff;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .transcript-entry {
+            padding: 15px;
+            border-bottom: 1px solid #f0f0f0;
+            position: relative;
+            transition: background 0.2s;
+        }
+        
+        .transcript-entry:active {
+            background: #f0f6ff;
+        }
+        
+        .transcript-entry:last-child {
+            border-bottom: none;
+        }
+        
+        .transcript-speaker {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .speaker-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+        
+        .teacher-icon {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            color: #1a6dcc;
+        }
+        
+        .student-icon {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            color: #2e7d32;
+        }
+        
+        .speaker-name {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .speaker-role {
+            font-size: 0.7rem;
+            color: #999;
+            margin-left: 5px;
+        }
+        
+        .transcript-time {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            font-size: 0.7rem;
+            color: #999;
+            background: #f5f9ff;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+        
+        .transcript-text {
+            font-size: 0.9rem;
+            line-height: 1.7;
+            padding-left: 42px;
+            color: #444;
+        }
+        
+        .transcript-keyword {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffe082 100%);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+            color: #856404;
+            margin: 0 2px;
+        }
+        
+        .transcript-meta {
+            font-size: 0.7rem;
+            color: #666;
+            margin-top: 8px;
+            padding-left: 42px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .transcript-meta i {
+            margin-right: 4px;
+            color: #1a6dcc;
+        }
+        
+        .transcript-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        
+        .transcript-btn {
+            background: #f0f6ff;
+            border: 1px solid #d1e3ff;
+            border-radius: 20px;
+            padding: 8px 14px;
+            font-size: 0.8rem;
+            color: #1a6dcc;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            transition: all 0.3s;
+            flex: 1;
+            min-width: 80px;
+            justify-content: center;
+        }
+        
+        .transcript-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .transcript-btn.active {
+            background: linear-gradient(135deg, #1a6dcc 0%, #0d4d9c 100%);
+            color: white;
+            border-color: #1a6dcc;
+        }
+        
+        .transcript-btn i {
+            margin-right: 5px;
+            font-size: 0.75rem;
+        }
+        
+        .transcript-search {
+            width: 100%;
+            position: relative;
+            margin-bottom: 8px;
+        }
+        
+        .transcript-search input {
+            width: 100%;
+            padding: 10px 15px 10px 40px;
+            border: 2px solid #d1e3ff;
+            border-radius: 25px;
+            font-size: 0.85rem;
+            background: white;
+            transition: border-color 0.3s;
+        }
+        
+        .transcript-search input:focus {
+            outline: none;
+            border-color: #1a6dcc;
+        }
+        
+        .transcript-search i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+        }
+        
+        .footer {
+            padding: 20px 15px;
+            text-align: center;
+            background: linear-gradient(135deg, #f8faff 0%, #f0f6ff 100%);
+            color: #666;
+            font-size: 0.75rem;
+            line-height: 1.8;
+        }
+        
+        .footer a {
+            color: #1a6dcc;
+            text-decoration: none;
+        }
+        
+        .timestamp {
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.9);
+            margin-top: 8px;
+        }
+        
+        .back-to-top {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #1a6dcc 0%, #0d4d9c 100%);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 16px rgba(26, 109, 204, 0.4);
+            cursor: pointer;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+            z-index: 1000;
+        }
+        
+        .back-to-top.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .back-to-top:active {
+            transform: scale(0.9);
+        }
+        
+        .subtitle {
+            font-size: 0.85rem;
+            color: #555;
+            margin: 12px 0 8px;
+            font-weight: 600;
+        }
+        
+        .knowledge-statistics {
+            margin-top: 12px;
+        }
+        
+        .knowledge-stat-item {
+            margin-bottom: 10px;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            background: #fafcff;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+        
+        .knowledge-stat-item:hover {
+            background: #f0f6ff;
+        }
+        
+        .knowledge-stat-item .knowledge-node {
+            min-width: 100px;
+            margin: 0;
+            padding: 6px 12px;
+            font-size: 0.75rem;
+            flex-shrink: 0;
+        }
+        
+        .knowledge-stat-item .stat-bar-container {
+            flex: 1;
+            height: 12px;
+            background: #e0e6f0;
+            border-radius: 6px;
+            margin: 0 10px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .knowledge-stat-item .stat-bar {
+            height: 100%;
+            border-radius: 6px;
+            transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+            position: relative;
+            min-width: 0;
+        }
+        
+        .knowledge-stat-item .stat-value {
+            min-width: 45px;
+            text-align: right;
+            color: #555;
+            font-weight: 600;
+            font-size: 0.8rem;
+            flex-shrink: 0;
+        }
+        
+        @media (max-width: 480px) {
+            body {
+                padding: 5px;
+            }
+            
+            .header {
+                padding: 18px 12px;
+            }
+            
+            .header h1 {
+                font-size: 1.3rem;
+            }
+            
+            .ai-badge {
+                font-size: 0.65rem;
+                padding: 5px 10px;
+                top: 10px;
+                right: 10px;
+            }
+            
+            .stats-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .section {
+                padding: 15px 12px;
+            }
+            
+            .section-title {
+                font-size: 1rem;
+            }
+            
+            .section-title i {
+                width: 32px;
+                height: 32px;
+                font-size: 0.85rem;
+            }
+            
+            .chart-container {
+                height: 250px;
+            }
+            
+            .transcript-text {
+                padding-left: 0;
+                margin-top: 8px;
+            }
+            
+            .transcript-meta {
+                padding-left: 0;
+                font-size: 0.65rem;
+            }
+            
+            .transcript-time {
+                position: static;
+                display: inline-block;
+                margin-left: auto;
+            }
+            
+            .interaction-table {
+                font-size: 0.75rem;
+            }
+            
+            .interaction-table th,
+            .interaction-table td {
+                padding: 10px 6px;
+            }
+            
+            .knowledge-stat-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+            
+            .knowledge-stat-item .knowledge-node {
+                min-width: auto;
+                width: auto;
+            }
+            
+            .knowledge-stat-item .stat-bar-container {
+                width: 100%;
+                margin: 0;
+            }
+            
+            .knowledge-stat-item .stat-bar {
+                /* 保持原有的百分比宽度，不要强制100% */
+            }
+            
+            .knowledge-stat-item .stat-value {
+                align-self: flex-end;
+                min-width: auto;
+            }
+            
+            .back-to-top {
+                width: 44px;
+                height: 44px;
+                bottom: 15px;
+                right: 15px;
+            }
+        }
+        
+        @media (max-width: 360px) {
+            .header h1 {
+                font-size: 1.1rem;
+            }
+            
+            .section-title {
+                font-size: 0.95rem;
+            }
+            
+            .stat-value {
+                font-size: 1.2rem;
+            }
+            
+            .transcript-btn {
+                font-size: 0.75rem;
+                padding: 6px 10px;
+            }
+            
+            .knowledge-node {
+                font-size: 0.75rem;
+                padding: 8px 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 报告头部 -->
+        <div class="header">
+            <div class="ai-badge">
+                <i class="fas fa-share-alt"></i> 分享
+            </div>
+            <h1>AI课堂教学录音分析报告</h1>
+            <p>商鞅变法内容与作用 - 历史课程</p>
+            <div class="recording-status active">
+                <i class="fas fa-circle"></i> 录音已结束 | 声纹识别完成
+            </div>
+            <div class="timestamp">生成时间：2025年10月15日 10:45:23</div>
+        </div>
+        
+        <!-- 课程基本信息 -->
+        <div class="report-info">
+            <div class="info-item">
+                <div class="info-label">授课教师</div>
+                <div class="info-value">敬老师</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">课程时长</div>
+                <div class="info-value">40分钟</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">学生人数</div>
+                <div class="info-value">45人</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">录音时间</div>
+                <div class="info-value">10:00-10:40</div>
+            </div>
+        </div>
+        
+        <!-- 文字实录模块 -->
+        <div class="section">
+            <div class="section-title">
+                <div class="section-title-left">
+                    <i class="fas fa-file-alt"></i>
+                    <span>课堂文字实录</span>
+                </div>
+                <button class="section-toggle" onclick="toggleSection(this)">
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+            </div>
+            <div class="section-content">
+                <div class="transcript-controls">
+                    <div class="transcript-search">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="searchTranscript" placeholder="搜索实录内容...">
+                    </div>
+                    <button class="transcript-btn active" onclick="filterTranscript('all', this)">
+                        <i class="fas fa-list"></i> 全部
+                    </button>
+                    <button class="transcript-btn" onclick="filterTranscript('teacher', this)">
+                        <i class="fas fa-chalkboard-teacher"></i> 教师
+                    </button>
+                    <button class="transcript-btn" onclick="filterTranscript('student', this)">
+                        <i class="fas fa-user-graduate"></i> 学生
+                    </button>
+                </div>
+                
+                <div class="transcript-container" id="transcriptContainer">
+                    <!-- 文字实录内容将通过JavaScript动态生成 -->
+                </div>
+                
+                <div style="text-align: center; margin-top: 12px; font-size: 0.75rem; color: #666; padding: 0 10px;">
+                    <i class="fas fa-info-circle"></i> 实录由AI语音识别生成，准确率约98.5% | 声纹识别准确率99.2%
+                </div>
+            </div>
+        </div>
+        
+        <!-- 教师表达能力分析 -->
+        <div class="section">
+            <div class="section-title">
+                <div class="section-title-left">
+                    <i class="fas fa-chart-line"></i>
+                    <span>教师表达能力分析</span>
+                </div>
+                <button class="section-toggle" onclick="toggleSection(this)">
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+            </div>
+            <div class="section-content">
+                <div class="stats-container">
+                    <div class="stat-card">
+                        <div class="stat-value">150字/分钟</div>
+                        <div class="stat-label">平均语速</div>
+                        <div class="stat-rating">适中，适合中学生</div>
+                        <div class="stat-progress">
+                            <div class="stat-progress-bar" style="width: 75%;"></div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">95%</div>
+                        <div class="stat-label">表达流畅度</div>
+                        <div class="stat-rating">语句连贯，偶有引导停顿</div>
+                        <div class="stat-progress">
+                            <div class="stat-progress-bar" style="width: 95%;"></div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">积极激昂</div>
+                        <div class="stat-label">情绪状态</div>
+                        <div class="stat-rating">情绪饱满，感染力强</div>
+                        <div class="stat-progress">
+                            <div class="stat-progress-bar" style="width: 88%;"></div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">清晰</div>
+                        <div class="stat-label">逻辑结构</div>
+                        <div class="stat-rating">按"背景→内容→作用"逐步展开</div>
+                        <div class="stat-progress">
+                            <div class="stat-progress-bar" style="width: 92%;"></div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">38分钟</div>
+                        <div class="stat-label">教师讲解时长</div>
+                        <div class="stat-rating">占总时长95%</div>
+                        <div class="stat-progress">
+                            <div class="stat-progress-bar" style="width: 95%;"></div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">2分钟</div>
+                        <div class="stat-label">学生互动时长</div>
+                        <div class="stat-rating">占总时长5%</div>
+                        <div class="stat-progress">
+                            <div class="stat-progress-bar" style="width: 5%; background: #FF9800;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 情感分析 -->
+        <div class="section">
+            <div class="section-title">
+                <div class="section-title-left">
+                    <i class="fas fa-smile"></i>
+                    <span>课堂情感分析</span>
+                </div>
+                <button class="section-toggle" onclick="toggleSection(this)">
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+            </div>
+            <div class="section-content">
+                <div class="chart-container">
+                    <canvas id="emotionChart"></canvas>
+                </div>
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #4CAF50;"></div>
+                        <span>表扬语句 (25%)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #F44336;"></div>
+                        <span>批评语句 (5%)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #2196F3;"></div>
+                        <span>管理语句 (30%)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #FF9800;"></div>
+                        <span>讲解语句 (40%)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 内容关系分析 -->
+        <div class="section">
+            <div class="section-title">
+                <div class="section-title-left">
+                    <i class="fas fa-project-diagram"></i>
+                    <span>内容逻辑关系分析</span>
+                </div>
+                <button class="section-toggle" onclick="toggleSection(this)">
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+            </div>
+            <div class="section-content">
+                <div class="chart-container">
+                    <canvas id="logicChart"></canvas>
+                </div>
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #9C27B0;"></div>
+                        <span>时序关系 (30%)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #3F51B5;"></div>
+                        <span>因果关系 (30%)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #00BCD4;"></div>
+                        <span>并列关系 (20%)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #8BC34A;"></div>
+                        <span>比较关系 (10%)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #FFC107;"></div>
+                        <span>扩展关系 (10%)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 知识点分析 -->
+        <div class="section">
+            <div class="section-title">
+                <div class="section-title-left">
+                    <i class="fas fa-brain"></i>
+                    <span>知识点分析</span>
+                </div>
+                <button class="section-toggle" onclick="toggleSection(this)">
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+            </div>
+            <div class="section-content">
+                <div class="knowledge-graph">
+                    <div class="subtitle">核心知识图谱节点</div>
+                    <div>
+                        <span class="knowledge-node highlight">战国背景</span>
+                        <span class="knowledge-node">秦国内外危机</span>
+                        <span class="knowledge-node">秦孝公求贤</span>
+                        <span class="knowledge-node">商鞅入秦</span>
+                        <span class="knowledge-node highlight">废井田开阡陌</span>
+                        <span class="knowledge-node highlight">军功爵制</span>
+                        <span class="knowledge-node">重农抑商</span>
+                        <span class="knowledge-node highlight">郡县制</span>
+                        <span class="knowledge-node">统一度量衡</span>
+                        <span class="knowledge-node">秦国强盛</span>
+                        <span class="knowledge-node">为统一奠基</span>
+                    </div>
+                    <div class="subtitle" style="margin-top: 20px;">知识点讲解热度分析</div>
+                    <div class="knowledge-statistics">
+                        <div class="knowledge-stat-item">
+                            <span class="knowledge-node highlight">战国背景</span>
+                            <div class="stat-bar-container">
+                                <div class="stat-bar" style="background: linear-gradient(90deg, #9C27B0, #BA68C8); width: 85%;"></div>
+                            </div>
+                            <span class="stat-value">85%</span>
+                        </div>
+                        <div class="knowledge-stat-item">
+                            <span class="knowledge-node">秦国内外危机</span>
+                            <div class="stat-bar-container">
+                                <div class="stat-bar" style="background: linear-gradient(90deg, #3F51B5, #5C6BC0); width: 42%;"></div>
+                            </div>
+                            <span class="stat-value">42%</span>
+                        </div>
+                        <div class="knowledge-stat-item">
+                            <span class="knowledge-node">秦孝公求贤</span>
+                            <div class="stat-bar-container">
+                                <div class="stat-bar" style="background: linear-gradient(90deg, #00BCD4, #26C6DA); width: 50%;"></div>
+                            </div>
+                            <span class="stat-value">50%</span>
+                        </div>
+                        <div class="knowledge-stat-item">
+                            <span class="knowledge-node">商鞅入秦</span>
+                            <div class="stat-bar-container">
+                                <div class="stat-bar" style="background: linear-gradient(90deg, #00BCD4, #26C6DA); width: 46%;"></div>
+                            </div>
+                            <span class="stat-value">46%</span>
+                        </div>
+                        <div class="knowledge-stat-item">
+                            <span class="knowledge-node highlight">废井田开阡陌</span>
+                            <div class="stat-bar-container">
+                                <div class="stat-bar" style="background: linear-gradient(90deg, #FFC107, #FFD54F); width: 67%;"></div>
+                            </div>
+                            <span class="stat-value">67%</span>
+                        </div>
+                        <div class="knowledge-stat-item">
+                            <span class="knowledge-node highlight">军功爵制</span>
+                            <div class="stat-bar-container">
+                                <div class="stat-bar" style="background: linear-gradient(90deg, #8BC34A, #AED581); width: 60%;"></div>
+                            </div>
+                            <span class="stat-value">60%</span>
+                        </div>
+                        <div class="knowledge-stat-item">
+                            <span class="knowledge-node">重农抑商</span>
+                            <div class="stat-bar-container">
+                                <div class="stat-bar" style="background: linear-gradient(90deg, #3F51B5, #5C6BC0); width: 31%;"></div>
+                            </div>
+                            <span class="stat-value">31%</span>
+                        </div>
+                        <div class="knowledge-stat-item">
+                            <span class="knowledge-node highlight">郡县制</span>
+                            <div class="stat-bar-container">
+                                <div class="stat-bar" style="background: linear-gradient(90deg, #9C27B0, #BA68C8); width: 81%;"></div>
+                            </div>
+                            <span class="stat-value">81%</span>
+                        </div>
+                        <div class="knowledge-stat-item">
+                            <span class="knowledge-node">统一度量衡</span>
+                            <div class="stat-bar-container">
+                                <div class="stat-bar" style="background: linear-gradient(90deg, #009688, #26A69A); width: 37%;"></div>
+                            </div>
+                            <span class="stat-value">37%</span>
+                        </div>
+                        <div class="knowledge-stat-item">
+                            <span class="knowledge-node">秦国强盛</span>
+                            <div class="stat-bar-container">
+                                <div class="stat-bar" style="background: linear-gradient(90deg, #FFC107, #FFD54F); width: 46%;"></div>
+                            </div>
+                            <span class="stat-value">46%</span>
+                        </div>
+                        <div class="knowledge-stat-item">
+                            <span class="knowledge-node">为统一奠基</span>
+                            <div class="stat-bar-container">
+                                <div class="stat-bar" style="background: linear-gradient(90deg, #8BC34A, #AED581); width: 35%;"></div>
+                            </div>
+                            <span class="stat-value">35%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 学生互动数据 -->
+        <div class="section">
+            <div class="section-title">
+                <div class="section-title-left">
+                    <i class="fas fa-comments"></i>
+                    <span>学生互动数据分析</span>
+                </div>
+                <button class="section-toggle" onclick="toggleSection(this)">
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+            </div>
+            <div class="section-content">
+                <table class="interaction-table">
+                    <thead>
+                        <tr>
+                            <th>时间点</th>
+                            <th>互动类型</th>
+                            <th>内容摘要</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>05:00</td>
+                            <td><span class="interaction-type type-question">提问引导</span></td>
+                            <td>"战国时代最先进的农具是什么？"</td>
+                        </tr>
+                        <tr>
+                            <td>12:00</td>
+                            <td><span class="interaction-type type-metaphor">比喻互动</span></td>
+                            <td>"如果班级值日改为责任到人…"</td>
+                        </tr>
+                        <tr>
+                            <td>18:00</td>
+                            <td><span class="interaction-type type-scenario">情景模拟</span></td>
+                            <td>"如果你是士兵，军功爵制会激励你吗？"</td>
+                        </tr>
+                        <tr>
+                            <td>25:00</td>
+                            <td><span class="interaction-type type-discussion">讨论题</span></td>
+                            <td>"刑上大夫对树立法律权威的作用？"</td>
+                        </tr>
+                        <tr>
+                            <td>35:00</td>
+                            <td><span class="interaction-type type-vote">扫码投票</span></td>
+                            <td>"你认为变法最突出的特点是什么？"</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- 教学建议 -->
+        <div class="section">
+            <div class="section-title">
+                <div class="section-title-left">
+                    <i class="fas fa-lightbulb"></i>
+                    <span>课堂教学分析建议</span>
+                </div>
+                <button class="section-toggle" onclick="toggleSection(this)">
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+            </div>
+            <div class="section-content">
+                <h3 style="font-size: 0.95rem; margin-bottom: 12px; color: #4CAF50; display: flex; align-items: center;">
+                    <i class="fas fa-check-circle" style="margin-right: 8px;"></i> 优点：
+                </h3>
+                <ul class="suggestion-list">
+                    <li>
+                        <div class="suggestion-icon good-icon">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <div>语言生动，比喻贴切（如"系统重装""游戏经验值"），易于学生理解</div>
+                    </li>
+                    <li>
+                        <div class="suggestion-icon good-icon">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <div>逻辑清晰，结构完整，知识点层层递进</div>
+                    </li>
+                    <li>
+                        <div class="suggestion-icon good-icon">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <div>互动形式多样（提问、比喻、情景、投票），学生参与度高</div>
+                    </li>
+                </ul>
+                
+                <h3 style="font-size: 0.95rem; margin: 20px 0 12px; color: #FF9800; display: flex; align-items: center;">
+                    <i class="fas fa-lightbulb" style="margin-right: 8px;"></i> 建议：
+                </h3>
+                <ul class="suggestion-list">
+                    <li>
+                        <div class="suggestion-icon">
+                            <i class="fas fa-plus"></i>
+                        </div>
+                        <div>可增加小组讨论环节：如"如果你是旧贵族，你会如何反对变法？"</div>
+                    </li>
+                    <li>
+                        <div class="suggestion-icon">
+                            <i class="fas fa-exchange-alt"></i>
+                        </div>
+                        <div>可引入对比材料：如与同时期其他诸侯国改革对比（吴起变法、申不害改革）</div>
+                    </li>
+                    <li>
+                        <div class="suggestion-icon">
+                            <i class="fas fa-forward"></i>
+                        </div>
+                        <div>可加强结尾引导：为下节课"商鞅之死"做更明确的问题铺垫</div>
+                    </li>
+                    <li>
+                        <div class="suggestion-icon">
+                            <i class="fas fa-tachometer-alt"></i>
+                        </div>
+                        <div>可适当放慢节奏：在讲解核心概念时可稍作停顿，确保学生消化</div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- 页脚 -->
+        <div class="footer">
+            <p><strong>AI课堂教学录音分析系统@浙江智加信息科技有限公司</strong></p>
+            <p>包含基础录音、语音转文字、声纹识别、教学分析等多种AI功能</p>
+            <p style="margin-top: 8px; color: #999;">报告编号: EDU-AI-20251015-087 | 版本: 2.1</p>
+        </div>
+    </div>
+    
+    <!-- 返回顶部按钮 -->
+    <div class="back-to-top" onclick="scrollToTop()">
+        <i class="fas fa-arrow-up"></i>
+    </div>
+
+    <script>
+        // 文字实录数据
+        const transcriptData = [
+            {
+                id: 1,
+                time: "00:00-02:30",
+                speaker: "teacher",
+                name: "敬老师",
+                text: "同学们，请看屏幕右侧这条腾云驾雾的龙！在中华文化中，龙象征着变革与新生。今天我们要穿越回两千多年前的战国时代，共同探索一场让秦国从落后小邦蜕变为强盛帝国的伟大变革——<span class='transcript-keyword'>商鞅变法</span>。我是敬老师，接下来让我们一起打开历史画卷，看看这位改革家如何像神医一样，为积贫积弱的秦国开出怎样的\"治国药方\"。",
+                emotion: "enthusiastic",
+                keywords: ["商鞅变法", "战国时代", "秦国"]
+            },
+            {
+                id: 2,
+                time: "02:30-05:00",
+                speaker: "teacher",
+                name: "敬老师",
+                text: "在这趟历史探索之旅开始前，我们先明确三个学习目标：第一，要像侦探一样搜集春秋战国时期的改革线索，理解那个风起云涌的时代特征；第二，重点剖析<span class='transcript-keyword'>商鞅变法</span>的具体措施，就像拆解一个精密的机械装置，看清每个零件的功能；第三，我们要共同探讨这场变法如何像推倒第一张多米诺骨牌，引发连锁历史反应。记住这三个关键词：<span class='transcript-keyword'>时代背景</span>、<span class='transcript-keyword'>变法内容</span>、<span class='transcript-keyword'>历史作用</span>，它们将像指南针一样指引我们的学习方向。",
+                emotion: "instructional",
+                keywords: ["商鞅变法", "时代背景", "变法内容", "历史作用"]
+            },
+            {
+                id: 3,
+                time: "05:00-07:00",
+                speaker: "teacher",
+                name: "敬老师",
+                text: "现在请大家化身小历史学家，带着六个核心问题开启探索：战国时代最先进的农具是什么？变法前的秦国有多落后？商鞅为什么要变法？变法的具体时间？最重要的改革措施有哪些？以及最关键的——这场变法像投入水面的石子，激起了怎样的历史涟漪？让我们把这些问题当作寻宝地图，在接下来的学习中逐一解锁答案。",
+                emotion: "engaging",
+                keywords: ["农具", "秦国", "改革措施"]
+            },
+            {
+                id: 4,
+                time: "07:00-08:30",
+                speaker: "student",
+                name: "学生A",
+                text: "老师，战国时期最先进的农具应该是铁制农具吧？我看书上说铁器比青铜器更坚硬耐用。",
+                emotion: "questioning",
+                keywords: ["铁制农具", "战国时期"]
+            },
+            {
+                id: 5,
+                time: "08:30-12:00",
+                speaker: "teacher",
+                name: "敬老师",
+                text: "（举起粉笔）想象一下，如果现在突然把大家的钢笔都换成羽毛笔，学习效率会怎样？战国时期正是经历了这样的工具革命！看这些出土的<span class='transcript-keyword'>铁锄</span>、<span class='transcript-keyword'>铁犁铧</span>和<span class='transcript-keyword'>铁镰</span>，它们就像当时的\"智能农机\"，让农业生产效率倍增。从石器到青铜器再到铁器，生产工具的升级就像我们从按键手机到智能手机的飞跃，彻底改变了社会发展的节奏。",
+                emotion: "excited",
+                keywords: ["铁锄", "铁犁铧", "铁镰", "生产工具"]
+            },
+            {
+                id: 6,
+                time: "12:00-15:00",
+                speaker: "teacher",
+                name: "敬老师",
+                text: "（指向牛尊插图）仔细观察这头青铜牛鼻子上的圆环！这说明战国人已经学会给牛\"穿鼻环\"，像现在给宠物系牵引绳一样驯服牛来耕地。<span class='transcript-keyword'>铁器+牛耕</span>的组合，相当于给农业装上了\"双引擎\"——同学们可以想象，原本十个人一天的工作量，现在一牛一犁就能完成，这种生产力大爆发正是变法的根本动力。",
+                emotion: "illustrative",
+                keywords: ["牛耕", "铁器+牛耕", "生产力"]
+            },
+            {
+                id: 7,
+                time: "15:00-18:00",
+                speaker: "teacher",
+                name: "敬老师",
+                text: "（模仿说书人语气）《史记》记载秦国当时\"僻在雍州，连诸侯开会都不带他玩\"，就像班级里那个坐在角落、不被重视的同学。更惨的是，强大的魏国直接闯进秦国家门抢地盘，秦国却无力反抗。这种\"<span class='transcript-keyword'>落后就要挨打</span>\"的处境，是不是很像有些同学因为成绩落后被嘲笑？正是这种危机感，催生了求变的种子。",
+                emotion: "dramatic",
+                keywords: ["落后就要挨打", "危机感", "秦国处境"]
+            },
+            {
+                id: 8,
+                time: "18:00-20:00",
+                speaker: "student",
+                name: "学生B",
+                text: "老师，那秦国当时是不是特别弱？连诸侯会议都不能参加？",
+                emotion: "curious",
+                keywords: ["秦国", "诸侯会议"]
+            },
+            {
+                id: 9,
+                time: "20:00-22:30",
+                speaker: "teacher",
+                name: "敬老师",
+                text: "转机出现在<span class='transcript-keyword'>秦孝公</span>即位后！这位年轻君主就像决心整顿班级的新班长，他\"布惠振孤寡，招战士明功赏\"——翻译成现代话就是：建立助学金、招募特长生、明确奖励制度。而他最聪明的一招是发布\"<span class='transcript-keyword'>求贤令</span>\"，就像现在面向全校招募学习委员，正是这个机会，让怀才不遇的商鞅看到了大展拳脚的舞台。",
+                emotion: "narrative",
+                keywords: ["秦孝公", "求贤令", "商鞅"]
+            },
+            {
+                id: 10,
+                time: "22:30-25:00",
+                speaker: "teacher",
+                name: "敬老师",
+                text: "现在我们进入变法的核心环节！请同学们化身史料分析师，阅读《史记》的这两段记载。注意关键词：\"<span class='transcript-keyword'>开阡陌</span>\"就像拆除旧田埂，把土地重新分给农民；\"<span class='transcript-keyword'>力本业</span>\"则是大力鼓励种田，成绩好的减免作业（徭役），偷懒的要受罚。思考一下：这些措施如何像玩经营游戏那样激发生产积极性？",
+                emotion: "analytical",
+                keywords: ["开阡陌", "力本业", "生产积极性"]
+            },
+            {
+                id: 11,
+                time: "25:00-28:00",
+                speaker: "student",
+                name: "学生C",
+                text: "老师，我觉得废井田就像我们班取消值日小组轮流制，改成每人固定区域负责，这样责任明确，效率肯定更高！",
+                emotion: "insightful",
+                keywords: ["废井田", "责任明确"]
+            },
+            {
+                id: 12,
+                time: "28:00-32:00",
+                speaker: "teacher",
+                name: "敬老师",
+                text: "说得好！\"<span class='transcript-keyword'>废井田开阡陌</span>\"相当于打破\"大锅饭\"制度，把集体土地承包到户。想象一下：如果班级值日改为责任到人，完成好的加分，是不是比轮流摸鱼更高效？这项改革确立了封建经济的\"游戏规则\"，让劳动者真正\"<span class='transcript-keyword'>多劳多得</span>\"，就像给经济引擎加满了燃油。",
+                emotion: "approving",
+                keywords: ["废井田开阡陌", "多劳多得", "经济引擎"]
+            },
+            {
+                id: 13,
+                time: "32:00-35:00",
+                speaker: "teacher",
+                name: "敬老师",
+                text: "军事改革更有意思！商鞅设立\"<span class='transcript-keyword'>军功积分制</span>\"：战场立功就能升级爵位，好比游戏里打怪赚经验值。最震撼的是废除\"<span class='transcript-keyword'>世卿世禄</span>\"——就像取消班干部世袭制，哪怕你是班长儿子，没军功也不能特殊待遇。这种\"<span class='transcript-keyword'>英雄不问出处</span>\"的制度，会不会激发战士们的斗志呢？",
+                emotion: "inspiring",
+                keywords: ["军功积分制", "世卿世禄", "英雄不问出处"]
+            },
+            {
+                id: 14,
+                time: "35:00-38:00",
+                speaker: "teacher",
+                name: "敬老师",
+                text: "综合所有内容，你认为商鞅变法最突出的特点是什么？是法家思想的指导？全面彻底的改革？还是雷厉风行的执行？请用手机扫描二维码参与投票，并举例说明你的观点。我们将随机抽取三位同学的分析进行展示。",
+                emotion: "concluding",
+                keywords: ["商鞅变法特点", "法家思想", "全面改革"]
+            },
+            {
+                id: 15,
+                time: "38:00-40:00",
+                speaker: "teacher",
+                name: "敬老师",
+                text: "变法的效果令人惊叹：十年后秦国出现\"<span class='transcript-keyword'>道不拾遗</span>\"的盛况，百姓\"<span class='transcript-keyword'>勇于公战怯于私斗</span>\"。这就像把混乱的班级变成文明标兵班。最终秦国实现\"<span class='transcript-keyword'>倾邻国而雄诸侯</span>\"的逆袭，为日后统一中国奠定基础。下节课我们将探讨：这场成功的改革，为何最终以商鞅车裂的悲剧收场？",
+                emotion: "reflective",
+                keywords: ["道不拾遗", "勇于公战", "倾邻国而雄诸侯", "商鞅车裂"]
+            }
+        ];
+
+        // 渲染文字实录
+        function renderTranscript(filter = 'all') {
+            const container = document.getElementById('transcriptContainer');
+            container.innerHTML = '';
+            
+            const filteredData = filter === 'all' 
+                ? transcriptData 
+                : transcriptData.filter(item => item.speaker === filter);
+            
+            if (filteredData.length === 0) {
+                container.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">没有找到匹配的内容</div>';
+                return;
+            }
+            
+            filteredData.forEach(entry => {
+                const entryDiv = document.createElement('div');
+                entryDiv.className = 'transcript-entry';
+                entryDiv.dataset.speaker = entry.speaker;
+                
+                const speakerClass = entry.speaker === 'teacher' ? 'teacher-icon' : 'student-icon';
+                const speakerText = entry.speaker === 'teacher' ? '教师' : '学生';
+                
+                entryDiv.innerHTML = `
+                    <div class="transcript-speaker">
+                        <div class="speaker-icon ${speakerClass}">
+                            ${entry.speaker === 'teacher' ? '敬' : entry.name.charAt(0)}
+                        </div>
+                        <div>
+                            <span class="speaker-name">${entry.name}</span>
+                            <span class="speaker-role">${speakerText}</span>
+                        </div>
+                        <div class="transcript-time">${entry.time}</div>
+                    </div>
+                    <div class="transcript-text">${entry.text}</div>
+                    <div class="transcript-meta">
+                        <span><i class="fas fa-heartbeat"></i> 情绪: ${getEmotionText(entry.emotion)}</span>
+                        <span><i class="fas fa-key"></i> 关键词: ${entry.keywords.join(', ')}</span>
+                    </div>
+                `;
+                
+                container.appendChild(entryDiv);
+            });
+        }
+        
+        // 获取情绪文本
+        function getEmotionText(emotion) {
+            const emotionMap = {
+                'enthusiastic': '热情洋溢',
+                'instructional': '指导性强',
+                'engaging': '引人入胜',
+                'questioning': '提问质疑',
+                'excited': '兴奋激动',
+                'illustrative': '形象生动',
+                'dramatic': '富有戏剧性',
+                'curious': '好奇探究',
+                'narrative': '叙述性强',
+                'analytical': '分析性强',
+                'insightful': '见解深刻',
+                'approving': '赞同鼓励',
+                'inspiring': '激励鼓舞',
+                'concluding': '总结归纳',
+                'reflective': '反思启发'
+            };
+            return emotionMap[emotion] || emotion;
+        }
+        
+        // 过滤文字实录
+        function filterTranscript(speaker, btn) {
+            // 更新按钮状态
+            document.querySelectorAll('.transcript-btn').forEach(b => {
+                b.classList.remove('active');
+            });
+            if (btn) btn.classList.add('active');
+            
+            renderTranscript(speaker);
+        }
+        
+        // 搜索文字实录
+        function searchTranscript() {
+            const searchInput = document.getElementById('searchTranscript');
+            const searchTerm = searchInput.value.toLowerCase().trim();
+            
+            if (!searchTerm) {
+                const activeBtn = document.querySelector('.transcript-btn.active');
+                const filter = activeBtn ? (activeBtn.textContent.includes('教师') ? 'teacher' : activeBtn.textContent.includes('学生') ? 'student' : 'all') : 'all';
+                renderTranscript(filter);
+                return;
+            }
+            
+            const container = document.getElementById('transcriptContainer');
+            container.innerHTML = '';
+            
+            const filteredData = transcriptData.filter(entry => 
+                entry.text.toLowerCase().includes(searchTerm) || 
+                entry.name.toLowerCase().includes(searchTerm) ||
+                entry.keywords.some(keyword => keyword.toLowerCase().includes(searchTerm))
+            );
+            
+            if (filteredData.length === 0) {
+                container.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">没有找到匹配的内容</div>';
+                return;
+            }
+            
+            filteredData.forEach(entry => {
+                const entryDiv = document.createElement('div');
+                entryDiv.className = 'transcript-entry';
+                
+                const speakerClass = entry.speaker === 'teacher' ? 'teacher-icon' : 'student-icon';
+                const speakerText = entry.speaker === 'teacher' ? '教师' : '学生';
+                
+                // 高亮搜索关键词
+                let highlightedText = entry.text;
+                const regex = new RegExp(`(${searchTerm})`, 'gi');
+                highlightedText = highlightedText.replace(regex, '<mark style="background-color: #ffeb3b; padding: 2px 4px; border-radius: 3px; font-weight: 600;">$1</mark>');
+                
+                entryDiv.innerHTML = `
+                    <div class="transcript-speaker">
+                        <div class="speaker-icon ${speakerClass}">
+                            ${entry.speaker === 'teacher' ? '敬' : entry.name.charAt(0)}
+                        </div>
+                        <div>
+                            <span class="speaker-name">${entry.name}</span>
+                            <span class="speaker-role">${speakerText}</span>
+                        </div>
+                        <div class="transcript-time">${entry.time}</div>
+                    </div>
+                    <div class="transcript-text">${highlightedText}</div>
+                    <div class="transcript-meta">
+                        <span><i class="fas fa-heartbeat"></i> 情绪: ${getEmotionText(entry.emotion)}</span>
+                        <span><i class="fas fa-key"></i> 关键词: ${entry.keywords.join(', ')}</span>
+                    </div>
+                `;
+                
+                container.appendChild(entryDiv);
+            });
+        }
+        
+        // 切换章节折叠/展开
+        function toggleSection(btn) {
+            const section = btn.closest('.section');
+            const content = section.querySelector('.section-content');
+            const isCollapsed = content.classList.contains('collapsed');
+            
+            if (isCollapsed) {
+                content.classList.remove('collapsed');
+                btn.classList.remove('collapsed');
+            } else {
+                content.classList.add('collapsed');
+                btn.classList.add('collapsed');
+            }
+        }
+        
+        // 图表初始化
+        function initCharts() {
+            // 情感分析图表
+            const emotionCtx = document.getElementById('emotionChart');
+            if (emotionCtx) {
+                new Chart(emotionCtx.getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['表扬语句', '批评语句', '管理语句', '讲解语句'],
+                        datasets: [{
+                            data: [25, 5, 30, 40],
+                            backgroundColor: ['#4CAF50', '#F44336', '#2196F3', '#FF9800'],
+                            borderWidth: 2,
+                            borderColor: '#fff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { 
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.label + ': ' + context.parsed + '%';
+                                    }
+                                }
+                            }
+                        },
+                        cutout: '65%'
+                    }
+                });
+            }
+            
+            // 逻辑关系分析图表
+            const logicCtx = document.getElementById('logicChart');
+            if (logicCtx) {
+                new Chart(logicCtx.getContext('2d'), {
+                    type: 'polarArea',
+                    data: {
+                        labels: ['时序关系', '因果关系', '并列关系', '比较关系', '扩展关系'],
+                        datasets: [{
+                            data: [30, 30, 20, 10, 10],
+                            backgroundColor: [
+                                'rgba(156, 39, 176, 0.7)',
+                                'rgba(63, 81, 181, 0.7)',
+                                'rgba(0, 188, 212, 0.7)',
+                                'rgba(139, 195, 74, 0.7)',
+                                'rgba(255, 193, 7, 0.7)'
+                            ],
+                            borderWidth: 2,
+                            borderColor: '#fff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { 
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.label + ': ' + context.parsed + '%';
+                                    }
+                                }
+                            }
+                        },
+                        scales: { 
+                            r: { 
+                                ticks: { display: false },
+                                grid: { display: false }
+                            } 
+                        }
+                    }
+                });
+            }
+        }
+        
+        // 返回顶部
+        function scrollToTop() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+        
+        // 页面加载完成后的初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 更新报告生成时间
+            const now = new Date();
+            const timestamp = `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 ${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+            const timestampEl = document.querySelector('.timestamp');
+            if (timestampEl) {
+                timestampEl.textContent = `生成时间：${timestamp}`;
+            }
+            
+            // 初始化文字实录
+            renderTranscript('all');
+            
+            // 初始化图表
+            setTimeout(initCharts, 100);
+            
+            // 添加知识点节点交互
+            document.querySelectorAll('.knowledge-node').forEach(node => {
+                node.addEventListener('click', function() {
+                    this.classList.toggle('highlight');
+                });
+            });
+            
+            // 添加搜索功能
+            const searchInput = document.getElementById('searchTranscript');
+            if (searchInput) {
+                let searchTimeout;
+                searchInput.addEventListener('input', function() {
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(searchTranscript, 300);
+                });
+                searchInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        clearTimeout(searchTimeout);
+                        searchTranscript();
+                    }
+                });
+            }
+            
+            // 返回顶部按钮显示/隐藏
+            const backToTop = document.querySelector('.back-to-top');
+            if (backToTop) {
+                window.addEventListener('scroll', function() {
+                    if (window.pageYOffset > 300) {
+                        backToTop.classList.add('visible');
+                    } else {
+                        backToTop.classList.remove('visible');
+                    }
+                });
+            }
+            
+            // 进度条动画
+            setTimeout(() => {
+                // 表达能力分析进度条动画
+                document.querySelectorAll('.stat-progress-bar').forEach(bar => {
+                    const width = bar.style.width;
+                    bar.style.width = '0';
+                    setTimeout(() => {
+                        bar.style.width = width;
+                    }, 100);
+                });
+                
+                // 知识点统计进度条动画 - 确保百分比正确显示
+                document.querySelectorAll('.knowledge-stat-item .stat-bar').forEach((bar, index) => {
+                    const width = bar.style.width;
+                    // 从百分比文本中提取数值
+                    const statItem = bar.closest('.knowledge-stat-item');
+                    const valueText = statItem.querySelector('.stat-value').textContent;
+                    const percentage = parseFloat(valueText);
+                    
+                    // 确保宽度与百分比匹配
+                    bar.style.width = '0';
+                    setTimeout(() => {
+                        bar.style.width = percentage + '%';
+                    }, 200 + index * 50); // 错开动画时间，形成依次出现的效果
+                });
+            }, 500);
+        });
+    </script>
+</body>
+</html>
